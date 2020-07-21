@@ -16,8 +16,9 @@
   forward_plugin /inter_redirect; #set the uri that the original request will be forwarded, serveral forward requests can be specified on the same level.  
   forward_plugin_request_body on|off; #indicates whether forward the original request body, default value will be on;  
   <br><br>
-  example:  
-  '''
+  
+## Example
+
 http{  
   ...
   upstream forwarded_server{
@@ -44,5 +45,5 @@ http{
   }
     ...
 }
-  '''
+``
    

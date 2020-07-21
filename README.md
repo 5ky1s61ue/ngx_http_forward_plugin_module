@@ -19,30 +19,30 @@
   
 ## Example
 
-  http{  
-    ...
-    upstream forwarded_server{
-      server server_ip:server_port;
-      keepalive 1024;
+    http{  
       ...
-    }
-    ...
-    server{
-      ...
-      location /test {
-        forward_plugin /inter_redirect;
-        proxy_set_header Host $http_host;
-        proxy_pass http://upstream_server;
+      upstream forwarded_server{
+        server server_ip:server_port;
+        keepalive 1024;
+        ...
       }
+      ...
+      server{
+        ...
+        location /test {
+          forward_plugin /inter_redirect;
+          proxy_set_header Host $http_host;
+          proxy_pass http://upstream_server;
+        }
 
-      location /inter_redirect {
-        internal;
-        proxy_set_header Host $http_host;
-        proxy_set_header X-Original-URI $request_uri;
-        proxy_pass forwarded_server;
+        location /inter_redirect {
+          internal;
+          proxy_set_header Host $http_host;
+          proxy_set_header X-Original-URI $request_uri;
+          proxy_pass forwarded_server;
+        }
+        ...
       }
-      ...
+        ...
     }
-      ...
-  }
    

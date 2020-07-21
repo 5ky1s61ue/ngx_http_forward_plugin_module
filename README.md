@@ -4,9 +4,9 @@
   a nginx plugin for forwading traffic to third upstream servers(here we called forwarded servers) and react according to third forwarded servers's response; If forwarded server response with specific status code, this plugin module will block the request with forwarded server's response; Otherwise, the original request will forward to the original upstream server.
   
 ## How To Build
-  `./configure --prefix=/path/of/nginx --add-dynamic-module=/path/of/mymodules/`
-  `make`
-  `make install`
+  `./configure --prefix=/path/of/nginx --add-dynamic-module=/path/of/mymodules/`  
+  `make`  
+  `make install`  
 
 ## How To Use
   do some configuration in nginx.conf as follow:
@@ -17,7 +17,7 @@
   forward_plugin_request_body on|off; #indicates whether forward the original request body, default value will be on;
   
   example:
-  `
+  '''
 http{  
   ...
   upstream forwarded_server{
@@ -44,5 +44,5 @@ http{
   }
     ...
 }
-  `
+  '''
    

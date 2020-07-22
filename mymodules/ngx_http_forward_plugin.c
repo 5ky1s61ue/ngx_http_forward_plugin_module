@@ -104,9 +104,8 @@ ngx_http_forward_plugin_handler(ngx_http_request_t *r)
     ngx_log_debug0(NGX_LOG_DEBUG_HTTP, r->connection->log, 0, "forward_plugin handler");
 
     ctx = ngx_http_get_module_ctx(r, ngx_http_forward_plugin_module);
-ngx_log_error(NGX_LOG_ERR, r->connection->log, 0, "[forward_plugin] ngx_http_forward_handler if ctx");
+
     if (ctx && ctx->sr_status) {
-ngx_log_error(NGX_LOG_ERR, r->connection->log, 0, "[forward_plugin] ngx_http_forward_handler return DECLINED");
         return NGX_DECLINED;
     }
 
@@ -131,9 +130,17 @@ ngx_log_error(NGX_LOG_ERR, r->connection->log, 0, "[forward_plugin] ngx_http_for
 
         ngx_http_finalize_request(r, NGX_DONE);
         return NGX_DONE;
+    } else {
+        ctx = ngx_pcalloc(r->pool, sizeof(ngx_http_forward_plugin_ctx_t));
+        if (ctx == NULL) {
+            return NGX_ERROR;
+        }
+        
+        ctx->status = NGX_DONE;
+        
+        ngx_http_set_ctx(r, ctx, ngx_http_forward_plugin_module);
+        return ngx_http_forward_plugin_handler_internal(r);
     }
-
-    return ngx_http_forward_plugin_handler_internal(r);
 }
 
 
@@ -173,7 +180,6 @@ ngx_http_forward_plugin_handler_internal(ngx_http_request_t *r)
         }
         psr->handler=forward_plugin_subrequest_post_handler;
         psr->data = ctx;
-ngx_log_error(NGX_LOG_ERR, r->connection->log, 0, "[forward_plugin] ngx_http_forward_plugin_handler_internal creating subrequest");
         if (ngx_http_subrequest(r, &name[i], &r->args, &sr, psr, NGX_HTTP_SUBREQUEST_WAITED) != NGX_OK)
         {
             return NGX_HTTP_INTERNAL_SERVER_ERROR;
@@ -183,7 +189,6 @@ ngx_log_error(NGX_LOG_ERR, r->connection->log, 0, "[forward_plugin] ngx_http_for
         sr->method = r->method;
         sr->method_name = r->method_name;
     }
-ngx_log_error(NGX_LOG_ERR, r->connection->log, 0, "[forward_plugin] ngx_http_forward_plugin_handler_internal end");
     return NGX_AGAIN;
 }
 
@@ -278,49 +283,35 @@ ngx_http_forward_plugin_init(ngx_conf_t *cf)
 
 
 static ngx_int_t forward_plugin_subrequest_post_handler(ngx_http_request_t *r, void *data, ngx_int_t rc){
-ngx_log_error(NGX_LOG_ERR, r->connection->log, 0, "[forward_plugin] my_subrequest_post_handler start");
     ngx_http_forward_plugin_ctx_t   *parent_ctx = data;
     parent_ctx->sr_status = r->headers_out.status;
     if (r->headers_out.status == 418) {
         parent_ctx->block_flag = 1;
-ngx_log_error(NGX_LOG_ERR, r->connection->log, 0, "[forward_plugin] my_subrequest_post_handler r->headers_out.status == 418");
         ngx_http_request_t *pr = r->parent;
         pr->headers_out = r->headers_out;
-ngx_log_error(NGX_LOG_ERR, r->connection->log, 0, "[forward_plugin] my_subrequest_post_handler pr->write_event_handler = my_post_handler;");
         pr->write_event_handler = forward_plugin_post_handler;
 
         ngx_buf_t *resp_buf = &r->upstream->buffer;
         ngx_uint_t body_len = resp_buf->last - resp_buf->pos;
         ngx_buf_t *temp_buf = ngx_create_temp_buf(pr->pool, body_len);
-ngx_log_error(NGX_LOG_ERR, r->connection->log, 0, "[forward_plugin] my_subrequest_post_handler ngx_memcpy(temp_buf->pos, resp_buf->pos, body_len);");
         ngx_memcpy(temp_buf->pos, resp_buf->pos, body_len);
         temp_buf->last = temp_buf->pos + body_len;
         temp_buf->last_buf = 1;
-ngx_log_error(NGX_LOG_ERR, r->connection->log, 0, "[forward_plugin] my_subrequest_post_handler pr->upstream->out_bufs->buf = temp_buf;");
         parent_ctx->sr_out_bufs = ngx_alloc_chain_link(pr->pool);
-ngx_log_error(NGX_LOG_ERR, r->connection->log, 0, "[forward_plugin] my_subrequest_post_handler temp_out_bufs->buf = temp_buf;");
         parent_ctx->sr_out_bufs->buf = temp_buf;
-ngx_log_error(NGX_LOG_ERR, r->connection->log, 0, "[forward_plugin] my_subrequest_post_handler temp_out_bufs->next = NULL;");
         parent_ctx->sr_out_bufs->next = NULL;
-ngx_log_error(NGX_LOG_ERR, r->connection->log, 0, "[forward_plugin] my_subrequest_post_handler pr->upstream->out_bufs = temp_out_bufs;");
     }
-ngx_log_error(NGX_LOG_ERR, r->connection->log, 0, "[forward_plugin] my_subrequest_post_handler end");
     return NGX_OK;
 }
 
 
 static void forward_plugin_post_handler(ngx_http_request_t *r){
-ngx_log_error(NGX_LOG_ERR, r->connection->log, 0, "[forward_plugin] my_post_handler start");
     ngx_http_forward_plugin_ctx_t *ctx = ngx_http_get_module_ctx(r, ngx_http_forward_plugin_module);
     if (ctx->block_flag) {
-ngx_log_error(NGX_LOG_ERR, r->connection->log, 0, "[forward_plugin] my_post_handler r->connection->buffered |= NGX_HTTP_WRITE_BUFFERED;");
         r->connection->buffered |= NGX_HTTP_WRITE_BUFFERED;
-ngx_log_error(NGX_LOG_ERR, r->connection->log, 0, "[forward_plugin] my_post_handler ngx_int_t ret = ngx_http_send_header(r);");
         ngx_int_t ret = ngx_http_send_header(r);
-ngx_log_error(NGX_LOG_ERR, r->connection->log, 0, "[forward_plugin] my_post_handler ret = ngx_http_output_filter(r, &out);");
         ret = ngx_http_output_filter(r, ctx->sr_out_bufs);
         ngx_http_finalize_request(r, ret);
-ngx_log_error(NGX_LOG_ERR, r->connection->log, 0, "[forward_plugin] my_post_handler end");
     } else {
         ngx_http_finalize_request(r, r->headers_out.status);
     }

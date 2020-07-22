@@ -42,7 +42,7 @@
           internal;
           proxy_set_header Host $http_host;
           proxy_set_header X-Original-URI $request_uri;
-          proxy_pass forwarded_server;
+          proxy_pass http://forwarded_server;
         }
         ...
       }

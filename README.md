@@ -1,4 +1,4 @@
-# ngx_http_forward_plugin
+# ngx_http_forward_plugin_module
 
 ## Description
   a nginx plugin demo for forwading traffic to third upstream servers(here we called forwarded servers) and react according to forwarded servers's response;  
